@@ -9,7 +9,7 @@ EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/project
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/buildings/protos/SmallResidentialTower.proto"
 EXTERNPROTO "../protos/RadioController.proto"
-EXTERNPROTO "../protos/FireSmoke.proto"
+IMPORTABLE EXTERNPROTO "../protos/FireSmoke.proto"
 
 DEF World WorldInfo {
   title "Wildfire scenario"
@@ -20,8 +20,8 @@ DEF World WorldInfo {
   }
 }
 Viewpoint {
-  orientation -0.5773502691896258 0.5773502691896258 0.5773502691896258 2.0944
-  position 0.003835383610931061 -0.05262558735179222 164.2876686787551
+  orientation -0.23574519829245902 -0.06567155165343186 0.9695934451023687 3.7524805389193094
+  position 164.3653136396066 120.7033541592766 115.16338247086392
   near 0.2
   follow "Mavic 2 PRO"
   followType "None"
@@ -83,8 +83,8 @@ DEF InitPos SquareManhole {
   size 1 1 0.05
 }
 Solid {
-  translation 4.04052e-07 -0.11 11.372
-  rotation 0 0 1 1.5708
+  translation 5.063373101865687e-05 -0.11030523159929495 11.319497064136776
+  rotation 4.287498112518321e-14 1.5792795382208466e-14 1 1.569520380987573
   children [
     Shape {
       appearance PBRAppearance {
@@ -106,16 +106,34 @@ Solid {
   physics Physics {
     density 500
   }
+  linearVelocity 6.384814837460758e-15 6.255627870035452e-16 -4.161320987229263e-14
+  angularVelocity 6.201484433541365e-13 2.450541020788323e-12 2.6734099299745126e-14
 }
 DEF FireSmoke FireSmoke {
-  translation 0 40 0.5
+  translation -13.05 4.04 3.5
   fireHeight 7
   fireRadius 3.5
 }
 DEF Drone Mavic2Pro {
-  translation 0 0 11.437
-  rotation 0 0 1 1.5708
+  hidden position_0_0 7.0490747114643475e-09
+  hidden linearVelocity_0 -1.2298948548717572e-11 3.1392220938285984e-11 1.5725270871425893e-11
+  hidden angularVelocity_0 5.631063076208763e-09 1.3609358674241263e-09 1.1301410694059627e-09
+  hidden position_16_0 -1.8103752500602906e-08
+  hidden linearVelocity_16 4.9152737181381374e-12 -2.40100418301051e-10 4.280140521819715e-11
+  hidden angularVelocity_16 5.631048236521017e-09 1.360984339028648e-09 1.4843693303077453e-08
+  hidden position_17_0 -6.0185377380105215e-09
+  hidden linearVelocity_17 3.873349933627005e-11 -1.7344682062370174e-10 5.5095950572027993e-11
+  hidden angularVelocity_17 1.0207310001392025e-08 -1.575401481235884e-08 1.4843759320013173e-08
+  hidden linearVelocity_18 2.945035263543116e-10 -5.438659237991747e-11 -8.51070138689537e-12
+  hidden angularVelocity_18 2.170383281923108e-08 -1.268003989929253e-08 1.4843759004241673e-08
+  translation -0.08812097102795381 -0.051322307347249345 11.434748029239882
+  rotation -2.2268832431226245e-07 1.8430215089361582e-06 0.9999999999982767 -2.880322090182837
   controller "drone_controller"
+  controllerArgs [
+    ""
+  ]
+  window "generic_window"
+  supervisor TRUE
   bodySlot [
     Receiver {
       name "ActionReceiver"
@@ -261,6 +279,7 @@ RadioController {
   translation 4.14588e-08 -2.5 11.37
   rotation -0.5773509358554485 0.5773489358556708 -0.5773509358554485 -2.094395307179586
   controller "<extern>"
+  window "generic_window"
   supervisor TRUE
 }
 SmallResidentialTower {

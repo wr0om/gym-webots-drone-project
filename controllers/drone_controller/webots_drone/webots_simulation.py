@@ -114,16 +114,15 @@ class WebotsSimulation(Supervisor):
 
     def init_target_node(self):
         # Fire vars
-        #target_node = self.getFromDef('Target')
-        target_node = self.getFromDef('FireSmoke')
+        target_node = self.getFromDef('Target')
         self.target_node = dict(
             node=target_node,
-            get_height=lambda: target_node.getField('fireHeight').getSFFloat(),
-            get_radius=lambda: target_node.getField('fireRadius').getSFFloat(),
+            get_height=lambda: target_node.getField('height').getSFFloat(),
+            get_radius=lambda: target_node.getField('radius').getSFFloat(),
             get_pos=lambda: np.array(
                 target_node.getField('translation').getSFVec3f()),
-            set_height=target_node.getField('fireHeight').setSFFloat,
-            set_radius=target_node.getField('fireRadius').setSFFloat,
+            set_height=target_node.getField('height').setSFFloat,
+            set_radius=target_node.getField('radius').setSFFloat,
             set_pos=target_node.getField('translation').setSFVec3f
         )
         self.risk_distance = compute_risk_distance(
