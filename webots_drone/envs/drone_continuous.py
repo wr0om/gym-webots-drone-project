@@ -386,7 +386,8 @@ class DroneEnvContinuous(gym.Env):
 
         elif mode == 'human':
             if self.viewer is None:
-                from gym.envs.classic_control import rendering
+                #from gym.envs.classic_control import rendering
+                from gym.utils import pyglet_rendering as rendering
                 self.viewer = rendering.SimpleImageViewer()
 
             if 'image' in self.last_info.keys():

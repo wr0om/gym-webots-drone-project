@@ -83,8 +83,8 @@ def info2obs_1d(infos):
     sensor_north = vector_state[-1]
     sensor_distance = info2distance(infos)
     # sensor_emitter = info2emitter_vector(infos)
-    obs_1d = np.hstack((sensor_attitude, sensor_position,
-                        sensor_north, sensor_distance), dtype=np.float32)
+    #obs_1d = np.hstack((sensor_attitude, sensor_position, sensor_north, sensor_distance), dtype=np.float32)
+    obs_1d = np.hstack((sensor_attitude, sensor_position, sensor_north, sensor_distance))
     return obs_1d
 
 

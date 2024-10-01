@@ -40,6 +40,10 @@ class DroneController(Robot):
         self.action = self.getDevice('ActionReceiver')  # channel 6
         self.action.enable(self.timestep)
         print('OK')
+
+        # get drone name from DEF
+        self.__drone_name = self.getName()
+        print(f'Drone name: {self.__drone_name}')
     
     def __motor_controllers(self, time_delta=1):
 
@@ -129,6 +133,12 @@ class DroneController(Robot):
     def __compute_velocity(self):
         # compute disturbances velocities
         command, _ = receiver_get_json(self.action)
+        receiver_name = command['drone_name'] if len(command.keys()) > 0 else ''
+        # check if the command is for this drone
+        if receiver_name != self.__drone_name:
+            return [0., 0., 0., 0.]
+        
+
         disturbances = (command['disturbances']
                         if len(command.keys()) > 0 else [0., 0., 0., 0.])
         # apply disturbances velocities

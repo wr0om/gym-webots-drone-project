@@ -20,8 +20,8 @@ DEF World WorldInfo {
   }
 }
 Viewpoint {
-  orientation -0.23574519829245902 -0.06567155165343186 0.9695934451023687 3.7524805389193094
-  position 164.3653136396066 120.7033541592766 115.16338247086392
+  orientation -0.4315185710511656 -0.3197994460482313 0.8435164711759957 4.30457908288758
+  position -0.35563316034035525 4.048596999378783 17.618362109349302
   near 0.2
   follow "Mavic 2 PRO"
   followType "None"
@@ -83,8 +83,8 @@ DEF InitPos SquareManhole {
   size 1 1 0.05
 }
 Solid {
-  translation 5.063373101865687e-05 -0.11030523159929495 11.319497064136776
-  rotation 4.287498112518321e-14 1.5792795382208466e-14 1 1.569520380987573
+  translation 5.0633731018271464e-05 -0.11030523159929463 11.319497064136776
+  rotation -4.388265911196007e-15 9.232816878554685e-15 1 1.569520380987576
   children [
     Shape {
       appearance PBRAppearance {
@@ -106,28 +106,166 @@ Solid {
   physics Physics {
     density 500
   }
-  linearVelocity 6.384814837460758e-15 6.255627870035452e-16 -4.161320987229263e-14
-  angularVelocity 6.201484433541365e-13 2.450541020788323e-12 2.6734099299745126e-14
 }
 DEF FireSmoke FireSmoke {
-  translation -13.05 4.04 3.5
+  translation 50 -50 3.5
   fireHeight 7
   fireRadius 3.5
 }
 DEF Drone Mavic2Pro {
-  hidden position_0_0 7.0490747114643475e-09
-  hidden linearVelocity_0 -1.2298948548717572e-11 3.1392220938285984e-11 1.5725270871425893e-11
-  hidden angularVelocity_0 5.631063076208763e-09 1.3609358674241263e-09 1.1301410694059627e-09
-  hidden position_16_0 -1.8103752500602906e-08
-  hidden linearVelocity_16 4.9152737181381374e-12 -2.40100418301051e-10 4.280140521819715e-11
-  hidden angularVelocity_16 5.631048236521017e-09 1.360984339028648e-09 1.4843693303077453e-08
-  hidden position_17_0 -6.0185377380105215e-09
-  hidden linearVelocity_17 3.873349933627005e-11 -1.7344682062370174e-10 5.5095950572027993e-11
-  hidden angularVelocity_17 1.0207310001392025e-08 -1.575401481235884e-08 1.4843759320013173e-08
-  hidden linearVelocity_18 2.945035263543116e-10 -5.438659237991747e-11 -8.51070138689537e-12
-  hidden angularVelocity_18 2.170383281923108e-08 -1.268003989929253e-08 1.4843759004241673e-08
-  translation -0.08812097102795381 -0.051322307347249345 11.434748029239882
-  rotation -2.2268832431226245e-07 1.8430215089361582e-06 0.9999999999982767 -2.880322090182837
+  translation -0.070931 0.00707258 11.4498
+  rotation 0.0006639050160698117 0.00026958525271875887 0.9999997432769276 -2.604209476611733
+  controller "drone_controller"
+  controllerArgs [
+    ""
+  ]
+  window "generic_window"
+  supervisor TRUE
+  bodySlot [
+    Receiver {
+      name "ActionReceiver"
+      channel 6
+    }
+    Emitter {
+      name "StateEmitter"
+      channel 4
+    }
+    DistanceSensor {
+      translation 0.06 0.0332 0.003
+      rotation 1 0 0 1.5708
+      name "front left dist sonar"
+      lookupTable [
+        0.5 50 0
+        20 2000 0
+        40 4000 0.1
+      ]
+      type "sonar"
+    }
+    DistanceSensor {
+      translation 0.06 -0.033 0.003
+      rotation 1 0 0 1.5708
+      name "front right dist sonar"
+      lookupTable [
+        0.5 50 0
+        20 2000 0
+        40 4000 0.1
+      ]
+      type "sonar"
+    }
+    DistanceSensor {
+      translation -0.1364 0 -0.011
+      rotation 0 -1 0 3.14159
+      children [
+        DEF DIST_SENSOR Pose {
+          rotation 0 0 -0.9999999999999999 1.5707953071795862
+          children [
+            Shape {
+              appearance PBRAppearance {
+                baseColor 0.5 0.5 0.5
+                roughness 0.8
+                metalness 0
+              }
+              geometry Cylinder {
+                height 0.004
+                radius 0.0035
+              }
+            }
+          ]
+        }
+      ]
+      name "rear top dist sonar"
+      lookupTable [
+        0.5 50 0
+        16 1600 0
+        32 3200 0.1
+      ]
+      type "sonar"
+    }
+    DistanceSensor {
+      translation -0.1343 0 -0.044
+      rotation 0 -1 0 3.14159
+      children [
+        USE DIST_SENSOR
+      ]
+      name "rear bottom dist sonar"
+      lookupTable [
+        0.5 50 0
+        16 1600 0
+        32 3200 0.1
+      ]
+      type "sonar"
+    }
+    DistanceSensor {
+      translation -0.1309 0.016 -0.003
+      rotation 0 0 1 1.5708
+      children [
+        USE DIST_SENSOR
+      ]
+      name "left side dist sonar"
+      lookupTable [
+        0.5 50 0
+        10 1000 0
+      ]
+      type "sonar"
+    }
+    DistanceSensor {
+      translation -0.1309 -0.016 -0.003
+      rotation 0.7071067811864082 -0.7071067811864082 -6.276108057863702e-07 -3.1415853071795863
+      children [
+        USE DIST_SENSOR
+      ]
+      name "right side dist sonar"
+      lookupTable [
+        0.5 50 0
+        10 1000 0
+      ]
+      type "sonar"
+    }
+    DistanceSensor {
+      translation -0.0255 0 -0.0519
+      rotation 0.5773509358537164 -0.5773479358540498 -0.5773519358536053 -2.0943853071795866
+      name "down front dist sonar"
+      lookupTable [
+        0.5 50 0
+        11 1100 0
+        22 2200 0.1
+      ]
+      type "sonar"
+    }
+    DistanceSensor {
+      translation -0.1123 0 -0.0519
+      rotation 0.5773509358537164 -0.5773479358540498 -0.5773519358536053 -2.0943853071795866
+      name "down back dist sonar"
+      lookupTable [
+        0.5 50 0
+        11 1100 0
+        22 2200 0.1
+      ]
+      type "sonar"
+    }
+    DistanceSensor {
+      translation -0.026 0 0.02
+      rotation 0 1 0 -1.5707953071795862
+      name "top dist infrared"
+      lookupTable [
+        0.1 10 0
+        8 800 0
+      ]
+      type "infra-red"
+    }
+  ]
+  cameraSlot [
+    Camera {
+      rotation 0 1 0 0.3490659
+      width 400
+      height 240
+    }
+  ]
+}
+DEF EnemyDrone1 Mavic2Pro {
+  translation -1.04478 -0.632814 11.5303
+  rotation 0.0006639050160698117 0.00026958525271875887 0.9999997432769276 -2.604209476611733
+  name "Mavic 2 PRO(1)"
   controller "drone_controller"
   controllerArgs [
     ""
