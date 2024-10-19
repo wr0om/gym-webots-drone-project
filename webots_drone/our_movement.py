@@ -68,8 +68,10 @@ class WebotsSimulation(Supervisor):
         self.enemy_drone_names = ['EnemyDrone1']
         self.enemy_drone_start_positions = {'EnemyDrone1': [5, 5, 15]}
         self.enemy_drone_target_positions = {'EnemyDrone1': [5, 5, 15]}
-        self.enemy_drone_paths = {'EnemyDrone1': [[5, 5, 15], [5, 5, 20], [5, 5, 15], [5, 5, 10]]}
+
+        self.enemy_drone_paths = {'EnemyDrone1': [[5, 5, 15], [5, 10, 15], [10, 10, 15], [7, 7, 15]]}
         self.enemy_drone_current_target = {'EnemyDrone1': 0} # next index in the path
+        self.enemy_drone_began_paths = {'EnemyDrone1': False}
         self.enemy_drone_current_positions = {'EnemyDrone1': [0] * 6} # x, y, z, roll, pitch, yaw
         
         self.epsilon_radius = 0.5
@@ -522,7 +524,7 @@ class WebotsSimulation(Supervisor):
 
 
 
-    def move_to_target(self, waypoints, is_init, drone_name, verbose_movement=False, verbose_target=True):
+    def move_to_target(self, drone_name, verbose_movement=False, verbose_target=True):
         """
         Move the robot to the given coordinates
         Parameters:
@@ -534,45 +536,45 @@ class WebotsSimulation(Supervisor):
             pitch_disturbance (float): pitch disturbance (negative value to go forward)
         """
 
-        if is_init:  # Initialization
-            self.enemy_drone_target_positions[drone_name][0:2] = waypoints[0]
-            if verbose_target:
-                print("First target: ", self.enemy_drone_target_positions[drone_name][0:2])
+        current_position = self.enemy_drone_current_positions[drone_name]
+        target_position = self.enemy_drone_paths[drone_name][self.enemy_drone_current_target[drone_name]]
 
         # if the robot is at the position with a precision of target_precision
-        if all([abs(x1 - x2) < self.target_precision for (x1, x2) in zip(self.enemy_drone_target_positions[drone_name], self.enemy_drone_current_positions[drone_name][0:2])]):
+        if all([abs(x1 - x2) < self.target_precision for (x1, x2) in zip(target_position, current_position[0:2])]):
+            
+            len_path = len(self.enemy_drone_paths[drone_name])
+            if self.enemy_drone_current_target[drone_name] == len_path - 1:
+                self.enemy_drone_current_target[drone_name] = len_path - 2
+            elif self.enemy_drone_current_target[drone_name] == 0:
+                self.enemy_drone_current_target[drone_name] = 1
+            else:
+                # randomly choose the next target +1 or -1
+                self.enemy_drone_current_target[drone_name] += np.random.choice([-1, 1])
 
-            self.target_index += 1
-            if self.target_index > len(waypoints) - 1:
-                self.target_index = 0
-            self.enemy_drone_target_positions[drone_name][0:2] = waypoints[self.target_index]
-            if verbose_target:
-                print("Target reached! New target: ",
-                      self.enemy_drone_target_positions[drone_name][0:2])
+            target_position = self.enemy_drone_paths[drone_name][self.enemy_drone_current_target[drone_name]]
+            self.enemy_drone_began_paths[drone_name] = True
 
-        # This will be in ]-pi;pi]
-        self.enemy_drone_target_positions[drone_name][2] = np.arctan2(
-            self.enemy_drone_target_positions[drone_name][1] - self.enemy_drone_current_positions[drone_name][1], self.enemy_drone_target_positions[drone_name][0] - self.enemy_drone_current_positions[drone_name][0])
-        # This is now in ]-2pi;2pi[
-        angle_left = self.enemy_drone_target_positions[drone_name][2] - self.enemy_drone_current_positions[drone_name][5]
-        # Normalize turn angle to ]-pi;pi]
+            if verbose_target: print("New target: ", target_position)
+
+
+        # This will be in [-pi;pi]
+        tmp = np.arctan2(target_position[1] - current_position[1], target_position[0] - current_position[0])
+        # This is now in [-2pi;2pi]
+        angle_left = tmp - current_position[5]
+        # Normalize turn angle to [-pi;pi]
         angle_left = (angle_left + 2 * np.pi) % (2 * np.pi)
-        if (angle_left > np.pi):
-            angle_left -= 2 * np.pi
+        if angle_left > np.pi: angle_left -= 2 * np.pi
 
         # Turn the robot to the left or to the right according the value and the sign of angle_left
         yaw_disturbance = self.MAX_YAW_DISTURBANCE * angle_left / (2 * np.pi)
         # non proportional and decreasing function
-        pitch_disturbance = clamp(
-            np.log10(abs(angle_left)), self.MAX_PITCH_DISTURBANCE, 0.1)
+        pitch_disturbance = clamp(np.log10(abs(angle_left)), self.MAX_PITCH_DISTURBANCE, 0.1)
 
         if verbose_movement:
-            distance_left = np.sqrt(((self.enemy_drone_target_positions[drone_name][0] - self.enemy_drone_current_positions[drone_name][0]) ** 2) + (
-                (self.enemy_drone_target_positions[drone_name][1] - self.enemy_drone_current_positions[drone_name][1]) ** 2))
-            print("remaning angle: {:.4f}, remaning distance: {:.4f}".format(
-                angle_left, distance_left))
+            distance_left = np.sqrt(((target_position[0] - current_position[0]) ** 2) + ((target_position[1] - current_position[1]) ** 2))
+            print("remaning angle: {:.4f}, remaning distance: {:.4f}".format(angle_left, distance_left))
         return yaw_disturbance, pitch_disturbance
-    
+
 
     def new_init_enemy_drones_positions(self):
         reached_drone_names = {name: False for name in self.enemy_drone_names}
@@ -630,8 +632,52 @@ class WebotsSimulation(Supervisor):
 
     def control_enemy_drones(self):
         # here continue the path using waypoints like in new_init_enemy_drones_positions with move_to_target
-        pass
+        self.read_data()
+        for enemy_drone in self.enemy_drone_names:
+            roll_disturbance, yaw_disturbance, pitch_disturbance = 0, 0, 0
+            drone_data = self.get_data(enemy_drone)
+            drone_pos = drone_data['position']
+            drone_orientation = drone_data['orientation']
+            roll, pitch, yaw = drone_orientation
+            roll_acceleration, pitch_acceleration, yaw_acceleration = drone_data['angular_velocity']
+            drone_speed = drone_data['speed']
 
+            target_position = self.enemy_drone_paths[enemy_drone][self.enemy_drone_current_target[enemy_drone]]
+            x, y, z = drone_pos
+            self.enemy_drone_current_positions[enemy_drone] = [x, y, z, roll, pitch, yaw]
+            altitude = z
+            a, b, c = target_position
+            target_altitude = c
+
+            # calculate disturbance needed to reach target position
+            # Calculate position errors
+            delta_x = a - x
+            delta_y = b - y
+            delta_z = c - z
+
+            # # check if drone is in epsilon radius sphere of target position
+            # if (delta_x**2 + delta_y**2 + delta_z**2) < self.epsilon_radius**2:
+            #     reached_drone_names[enemy_drone] = True # TODO: make sure they stand still when they reach the position
+
+            print(f"target position: {target_position}, current position: {drone_pos}")
+            if delta_z < 1:
+                yaw_disturbance, pitch_disturbance = self.move_to_target(enemy_drone)
+        
+            roll_input = self.K_ROLL_P * clamp(roll, -1, 1) + roll_acceleration + roll_disturbance
+            pitch_input = self.K_PITCH_P * clamp(pitch, -1, 1) + pitch_acceleration + pitch_disturbance
+            yaw_input = yaw_disturbance
+            clamped_difference_altitude = clamp(target_altitude - altitude + self.K_VERTICAL_OFFSET, -1, 1)
+            vertical_input = self.K_VERTICAL_P * pow(clamped_difference_altitude, 3.0)
+
+            front_left_motor_input =  vertical_input - yaw_input + pitch_input - roll_input
+            front_right_motor_input = vertical_input + yaw_input + pitch_input + roll_input
+            rear_left_motor_input =  vertical_input + yaw_input - pitch_input - roll_input
+            rear_right_motor_input = vertical_input - yaw_input - pitch_input + roll_input
+
+            action = [front_left_motor_input, front_right_motor_input, rear_left_motor_input, rear_right_motor_input]
+            disturbances = dict(disturbances=action)
+            # perform action
+            controller.send_data(disturbances, drone_name=enemy_drone)
 
 if __name__ == '__main__':
     import cv2
@@ -746,9 +792,7 @@ if __name__ == '__main__':
 
         # get enemy drones in position
         #controller.init_enemy_drones_positions()
-        controller.new_init_enemy_drones_positions()
-
-
+        # controller.new_init_enemy_drones_positions()
 
         # capture initial state
         state = controller.get_data(controller.drone_name)
@@ -756,55 +800,29 @@ if __name__ == '__main__':
 
         print('Fire scene is running')
         while (run_flag):  # and drone.getTime() < 30):
-
+            
             controller.control_enemy_drones()
 
+            # check if all enemy drones have begun their paths
+            if all([value for key, value in controller.enemy_drone_began_paths.items()]):
+                if take_shot:
+                    timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+                    cv2.imwrite(f'photos/picture_{timestamp}.png', state['image'])
 
-            # 2 dimension considered
-            uav_pos_t = state['position'][:2]  # pos_t
-            uav_pos_t1 = next_state['position'][:2]  # pos_t+1
-            uav_ori_t1 = next_state['north_rad']
-            target_xy = controller.get_target_pos()[:2]
-            # target_ori = compute_target_orientation(uav_pos_t1, target_xy)
-
-            # # compute reward components
-            # curr_distance = compute_distance(target_xy, uav_pos_t)
-            # next_distance = compute_distance(target_xy, uav_pos_t1)
-            # distance_diff = np.round(curr_distance - next_distance, 3)
-            # distance_diff *= np.abs(distance_diff) > 0.003
-            # reward = compute_vector_reward(
-            #     target_xy, uav_pos_t, uav_pos_t1, uav_ori_t1,
-            #     distance_target=controller.get_risk_distance(goal_threshold / 2.),
-            #     distance_margin=goal_threshold)
-
-            # # observation = info2image(next_state, output_size=84)
-            # # reward += compute_visual_reward(observation)
-            # accum_reward += reward
-            # if step % frame_skip == 0:
-            #     print(f"pos_t: {uav_pos_t[0]:.3f} {uav_pos_t[1]:.3f}"\
-            #           f" - post_t+1: {uav_pos_t1[0]:.3f} {uav_pos_t1[1]:.3f} (N:{uav_ori_t1:.3f})"\
-            #           f" -> reward ({reward:.4f}) {accum_reward:.4f}"\
-            #           f" diff: {distance_diff:.4f} ({curr_distance:.4f}/{controller.get_risk_distance(goal_threshold/2.):.4f})")
-            #     accum_reward = 0
-
-            if take_shot:
-                timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-                cv2.imwrite(f'photos/picture_{timestamp}.png', state['image'])
-
-            state = next_state.copy()
-            # capture action
-            action, run_flag, take_shot = get_kb_action(kb)
-            disturbances = dict(disturbances=action)
-            # perform action
-            controller.send_data(disturbances, drone_name=controller.drone_name)
-            # capture state
-            next_state = controller.get_data(controller.drone_name)
-            if show and next_state is not None:
-                cv2.imshow("Drone's live view", next_state['image'])
-                cv2.waitKey(1)
-            step += 1
-        if show:
-            cv2.destroyAllWindows()
+                state = next_state.copy()
+                # capture action
+                action, run_flag, take_shot = get_kb_action(kb)
+                disturbances = dict(disturbances=action)
+                # perform action
+                controller.send_data(disturbances, drone_name=controller.drone_name)
+                # capture state
+                next_state = controller.get_data(controller.drone_name)
+            #     if show and next_state is not None:
+            #         cv2.imshow("Drone's live view", next_state['image'])
+            #         cv2.waitKey(1)
+            #     step += 1
+            # if show:
+            #     cv2.destroyAllWindows()
 
     # run controller
     try:
