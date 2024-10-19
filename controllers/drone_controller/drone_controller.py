@@ -131,16 +131,24 @@ class DroneController(Robot):
         return pose_disturbance
 
     def __compute_velocity(self):
+        """
+        Compute the velocity of the motors given the disturbances.
+        Disturbances are the variations of the angles and altitude.
+
+        Performs the disturbances iff the command is for this drone (receiver_name == self.__drone_name), and a command is received.
+        """
+
         # compute disturbances velocities
         command, _ = receiver_get_json(self.action)
         receiver_name = command['drone_name'] if len(command.keys()) > 0 else ''
         # check if the command is for this drone
-        if receiver_name != self.__drone_name:
-            return [0., 0., 0., 0.]
-        
-
-        disturbances = (command['disturbances']
-                        if len(command.keys()) > 0 else [0., 0., 0., 0.])
+        if receiver_name != self.__drone_name or len(command.keys()) == 0:
+            disturbances = [0., 0., 0., 0.]
+        else:
+            disturbances = command['disturbances']
+                            
+        # disturbances = (command['disturbances']
+        #                     if len(command.keys()) > 0 else [0., 0., 0., 0.])
         # apply disturbances velocities
         pose_disturbance = self.__compute_disturbances(disturbances)
         roll_d, pitch_d, yaw_d, thrust_d = pose_disturbance
@@ -169,11 +177,27 @@ class DroneController(Robot):
                         speed=uav_speed,
                         north=uav_north_rad,
                         dist_sensors=uav_distance_sensors,
-                        motors_vel=motors_vel)
+                        motors_vel=motors_vel,
+                        )
         enc_img = "NoImage" if uav_image is None else encode_image(uav_image)
         msg_data['image'] = enc_img
+        msg_data['drone_name'] = self.__drone_name
         # send data
         emitter_send_json(self.state, msg_data)
+
+
+    def new_compute_velocity(self):
+        # compute disturbances velocities
+        command, _ = receiver_get_json(self.action)
+        receiver_name = command['drone_name'] if len(command.keys()) > 0 else ''
+        # check if the command is for this drone
+        if receiver_name != self.__drone_name or len(command.keys()) == 0:
+            disturbances = [0., 0., 0., 0.]
+        else:
+            disturbances = command['disturbances']
+
+        return disturbances
+
 
     def run(self):
         """Run controller's main loop.
@@ -189,7 +213,10 @@ class DroneController(Robot):
         print('Drone control is active')
         while self.step(self.timestep) != -1:
             # actuates over devices and motors
-            propellers_vel = self.__compute_velocity()
+            if self.__drone_name == "Drone":
+                propellers_vel = self.__compute_velocity()
+            else:
+                propellers_vel = self.new_compute_velocity()
             self.__drone.set_motors_velocity(*propellers_vel)
             self.__drone.blink_leds()
             #self.__drone.gimbal_stabilize()
